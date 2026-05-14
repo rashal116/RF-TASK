@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a user profile on the platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "balance": { "type": "number" },
+        "totalEarned": { "type": "number" },
+        "lifetimeEarned": { "type": "number" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "referralsCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "balance", "totalEarned", "lifetimeEarned", "referralCode", "referralsCount", "status", "createdAt", "updatedAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task that users can complete to earn money.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "reward": { "type": "number" },
+        "type": { "type": "string", "enum": ["ad", "telegram"] },
+        "url": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "reward", "type", "isActive", "createdAt"]
+    },
+    "UserTask": {
+      "title": "UserTask",
+      "description": "Records the completion of a task by a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "type": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "reward": { "type": "number" }
+      },
+      "required": ["userId", "taskId", "type", "completedAt", "reward"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "A withdrawal request from a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string", "enum": ["Bkash", "Nagad"] },
+        "address": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "method", "address", "status", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "An administrator on the system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["uid"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings.",
+      "type": "object",
+      "properties": {
+        "minWithdrawal": { "type": "number" },
+        "minReferralsForWithdraw": { "type": "number" },
+        "referralBonusPercent": { "type": "number" },
+        "adLimitHourly": { "type": "number" },
+        "adLimitDaily": { "type": "number" }
+      },
+      "required": ["minWithdrawal", "minReferralsForWithdraw", "referralBonusPercent", "adLimitHourly", "adLimitDaily"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "User profiles and balances."
+    },
+    "tasks": {
+      "schema": "Task",
+      "description": "Available tasks list."
+    },
+    "userTasks": {
+      "schema": "UserTask",
+      "description": "Log of completed tasks per user."
+    },
+    "withdrawals": {
+      "schema": "Withdrawal",
+      "description": "User withdrawal requests."
+    },
+    "admins": {
+      "schema": "Admin",
+      "description": "List of admin users."
+    },
+    "settings": {
+      "schema": "Settings",
+      "description": "Global config (usually a single document 'global')."
+    }
+  }
+}

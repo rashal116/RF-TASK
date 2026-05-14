@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definitions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'rashaltechworld@gmail.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.balance is number && data.balance >= 0 &&
+             data.totalEarned is number && data.totalEarned >= 0 &&
+             data.lifetimeEarned is number && data.lifetimeEarned >= 0 &&
+             data.referralsCount is number && data.referralsCount >= 0 &&
+             data.referralCode is string && data.referralCode.size() <= 32 &&
+             data.status in ['active', 'suspended'];
+    }
+
+    function isValidWithdrawal(data) {
+      return data.userId == request.auth.uid &&
+             data.amount is number && data.amount > 0 &&
+             data.method in ['Bkash', 'Nagad'] &&
+             data.address is string && data.address.size() <= 256 &&
+             data.status == 'pending';
+    }
+
+    function isValidTask(data) {
+      return data.title is string && data.title.size() <= 128 &&
+             data.reward is number && data.reward >= 0 &&
+             data.type in ['ad', 'telegram', 'video'] &&
+             data.isActive is bool;
+    }
+
+    function isValidUserTask(data) {
+      return data.userId == request.auth.uid &&
+             data.taskId is string &&
+             data.type is string &&
+             data.reward is number;
+    }
+
+    // Collections
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin(); // Users cannot list other users
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) && isValidUser(incoming()) && (
+        // Action: User updating their own profile (limited fields)
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'referralCode', 'referredBy'])
+      )) || (isAdmin());
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isValidTask(incoming());
+    }
+
+    match /userTasks/{userTaskId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidUserTask(incoming()) && 
+                    !exists(/databases/$(database)/documents/userTasks/$(userTaskId));
+      // No updates for user tasks - they are logs
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidWithdrawal(incoming());
+      allow update: if isAdmin() && 
+                    incoming().diff(existing()).affectedKeys().hasAll(['status', 'updatedAt']) &&
+                    incoming().status in ['approved', 'rejected'];
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
